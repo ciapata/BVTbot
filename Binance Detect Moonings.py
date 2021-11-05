@@ -1,6 +1,6 @@
 """
 Olorin Sledge Fork
-Version: 1.26
+Version: 1.27
 
 Disclaimer
 
@@ -60,6 +60,9 @@ Added version 1.26:
   2. Type in the SYMBOL including the pair and the bot will sell it.
   3. It will loop 1 to 2 until you choose N
   4. Bot ends
+
+Added version 1.27
+- Menu system on stopping (CTRL+C) the bot for options to: Exit bot, sell all coins, sell specific coin, resume bot
 
 DONATIONS
 If you feel you would like to donate to me, for all the above improvements, I would greatly appreciate it. Please see donation options below.
@@ -1140,6 +1143,8 @@ def sell_all(msgreason, session_tspl_ovr = False):
     discordmsg = balance_report(last_price)
     msg_discord(discordmsg)
 
+    sell_all_coins = False
+
 def sell_a_specific_coin(coin):
     global sell_specific_coin
 
@@ -1150,6 +1155,8 @@ def sell_a_specific_coin(coin):
 
     coins_sold = sell_coins(False, coin)
     remove_from_portfolio(coins_sold)
+
+    sell_specific_coin = False
     
 def restart_signal_threads():
     try:
@@ -1434,7 +1441,7 @@ if __name__ == '__main__':
         with open(coins_bought_file_path) as file:
                 coins_bought = json.load(file)
 
-    print('Press Ctrl-C to stop the script')
+    print(f'{txcolors.WARNING}Press Ctrl-C for more options / to stop the bot{txcolors.DEFAULT}')
 
     if not TEST_MODE:
         if not args.notimeout: # if notimeout skip this (fast for dev tests)
@@ -1487,75 +1494,75 @@ if __name__ == '__main__':
             # stop external signal threads
             stop_signal_threads()
 
-            # ask user if they want to sell all coins
-            print_notimestamp(f'{txcolors.WARNING}\n\nProgram execution ended by user! Do you want to sell all coins (y/N)?{txcolors.DEFAULT}')
-            sellall = input()
-            if sellall.upper() == "Y":
-                # sell all coins
-                sell_all('Program execution ended by user!')
-                sys.exit(0)
+            while True:
+                #print_notimestamp(f'{txcolors.WARNING}\n--|  Binance Bot Menu  |--{txcolors.DEFAULT}')
+                print_notimestamp(f'\n[1] Exit (default option)')
+                print_notimestamp(f'\n[2] Sell All Coins')
+                print_notimestamp(f'\n[3] Sell A Specific Coin')
+                print_notimestamp(f'\n[4] Resume Bot')
+                print_notimestamp(f'\n{txcolors.WARNING}Please choose one of the above menu options ([1]. Exit):{txcolors.DEFAULT}')
+                menuoption = input()
 
-            # ask user if they want to sell a specific coin
-            print_notimestamp(f'{txcolors.WARNING}\nDo you want to sell a specific coin (y/N)?{txcolors.DEFAULT}')
-            theinput = input()
-            if theinput.upper() == "Y":
+                if menuoption == "1" or menuoption == "":
+                    print_notimestamp('\n')
+                    sys.exit(0)
+                elif menuoption == "2":
+                    print_notimestamp('\n')
+                    sell_all('Sell All Coins menu option chosen!')
+                    print_notimestamp('\n')
+                elif menuoption == "3":
+                    while not menuoption.upper() == "N":
+                        # setup table
+                        my_table = PrettyTable()
+                        my_table.field_names = ["Symbol", "Volume", "Bought At", "Now At", "TP %", "SL %", "Change % (ex fees)", "Profit $", "Time Held"]
+                        my_table.align["Symbol"] = "l"
+                        my_table.align["Volume"] = "r"
+                        my_table.align["Bought At"] = "r"
+                        my_table.align["Now At"] = "r"
+                        my_table.align["TP %"] = "r"
+                        my_table.align["SL %"] = "r"
+                        my_table.align["Change % (ex fees)"] = "r"
+                        my_table.align["Profit $"] = "r"
+                        my_table.align["Time Held"] = "l"
 
-                #os.system('cls' if os.name == 'nt' else 'clear')
-                while not theinput.upper() == "N":
-                    # setup table
-                    my_table = PrettyTable()
-                    my_table.field_names = ["Symbol", "Volume", "Bought At", "Now At", "TP %", "SL %", "Change % (ex fees)", "Profit $", "Time Held"]
-                    my_table.align["Symbol"] = "l"
-                    my_table.align["Volume"] = "r"
-                    my_table.align["Bought At"] = "r"
-                    my_table.align["Now At"] = "r"
-                    my_table.align["TP %"] = "r"
-                    my_table.align["SL %"] = "r"
-                    my_table.align["Change % (ex fees)"] = "r"
-                    my_table.align["Profit $"] = "r"
-                    my_table.align["Time Held"] = "l"
+                        # get latest prices
+                        last_price = wrap_get_price()
 
-                    # get latest prices
-                    last_price = wrap_get_price()
+                        # display coins to sell
+                        #print('\n')
+                        for coin in coins_bought:
+                            time_held = timedelta(seconds=datetime.now().timestamp()-int(str(coins_bought[coin]['timestamp'])[:10]))
+                            change_perc = (float(last_price[coin]['price']) - float(coins_bought[coin]['bought_at']))/float(coins_bought[coin]['bought_at']) * 100
+                            ProfitExFees = float(last_price[coin]['price']) - float(coins_bought[coin]['bought_at'])
+                            my_table.add_row([f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{coin}{txcolors.DEFAULT}",
+                                            f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coins_bought[coin]['volume']):.6f}{txcolors.DEFAULT}",
+                                            f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coins_bought[coin]['bought_at']):.6f}{txcolors.DEFAULT}",
+                                            f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(last_price[coin]['price']):.6f}{txcolors.DEFAULT}",
+                                            f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coins_bought[coin]['take_profit']):.4f}{txcolors.DEFAULT}",
+                                            f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coins_bought[coin]['stop_loss']):.4f}{txcolors.DEFAULT}",
+                                            f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{change_perc:.4f}{txcolors.DEFAULT}",
+                                            f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{(float(coins_bought[coin]['volume'])*float(coins_bought[coin]['bought_at'])*change_perc)/100:.6f}{txcolors.DEFAULT}",
+                                            f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{str(time_held).split('.')[0]}{txcolors.DEFAULT}"])
+                            
+                        my_table.sortby = 'Change % (ex fees)'
+                        if len(my_table._rows) > 0:
+                            print_notimestamp(my_table)
+                        else:
+                            break
 
-                    # display coins to sell
-                    print('\n')
-                    for coin in coins_bought:
-                        time_held = timedelta(seconds=datetime.now().timestamp()-int(str(coins_bought[coin]['timestamp'])[:10]))
-                        change_perc = (float(last_price[coin]['price']) - float(coins_bought[coin]['bought_at']))/float(coins_bought[coin]['bought_at']) * 100
-                        ProfitExFees = float(last_price[coin]['price']) - float(coins_bought[coin]['bought_at'])
-                        my_table.add_row([f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{coin}{txcolors.DEFAULT}",
-                                          f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coins_bought[coin]['volume']):.6f}{txcolors.DEFAULT}",
-                                          f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coins_bought[coin]['bought_at']):.6f}{txcolors.DEFAULT}",
-                                          f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(last_price[coin]['price']):.6f}{txcolors.DEFAULT}",
-                                          f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coins_bought[coin]['take_profit']):.4f}{txcolors.DEFAULT}",
-                                          f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{float(coins_bought[coin]['stop_loss']):.4f}{txcolors.DEFAULT}",
-                                          f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{change_perc:.4f}{txcolors.DEFAULT}",
-                                          f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{(float(coins_bought[coin]['volume'])*float(coins_bought[coin]['bought_at'])*change_perc)/100:.6f}{txcolors.DEFAULT}",
-                                          f"{txcolors.SELL_PROFIT if ProfitExFees >= 0. else txcolors.SELL_LOSS}{str(time_held).split('.')[0]}{txcolors.DEFAULT}"])
-                        
-                    my_table.sortby = 'Change % (ex fees)'
-                    if len(my_table._rows) > 0:
-                        print_table(my_table)
-                    else:
-                        break
+                        # ask for coin to sell
+                        print_notimestamp(f'{txcolors.WARNING}\nType in the Symbol you wish to sell, including pair (i.e. BTCUSDT) or type N to return to Menu (N)?{txcolors.DEFAULT}')
+                        menuoption = input()
+                        if menuoption == "":
+                            break
 
-                    # ask for coin to sell
-                    print_notimestamp(f'{txcolors.WARNING}\nType in the Symbol you wish to sell, including pair (i.e. BTCUSDT) or type N to abort (N)?{txcolors.DEFAULT}')
-                    theinput = input()
-                    if theinput == "":
-                        break
+                        sell_a_specific_coin(menuoption.upper())         
+                elif menuoption == "4":
+                   print_notimestamp(f'{txcolors.WARNING}\nResuming the bot...\n\n{txcolors.DEFAULT}')
+                   start_signal_threads()
+                   break
 
-                    sell_a_specific_coin(theinput.upper())
-                
-                # display final info to screen
-                #os.system('cls' if os.name == 'nt' else 'clear')
-                last_price = wrap_get_price()
-                discordmsg = balance_report(last_price)
-                msg_discord(discordmsg)
-  
-            sys.exit(0)
-
+            
     if not is_bot_running:
         if SESSION_TPSL_OVERRIDE:
             print(f'')
