@@ -1,5 +1,5 @@
 """
-The Snail v 2
+The Snail v 2.1
 "Buy the dips! ... then wait"
 
 STRATEGY
@@ -15,6 +15,8 @@ STRATEGY
   i.e. if your TAKE_PROFIT is 3%, but the movement is only 1%, then you wont hit TP and will be left holding the coin
   This can be turned off if you want.
 
+* ATR MOVEMENT
+calculates Average True Range Percent (ATRP) as an alternative to the default movement
 
 STRATEGY SETTINGS
 LIMIT = 4
@@ -33,6 +35,7 @@ Set True / False for compatibility
 
 DISCORD
 send message to Discord - Set True / False
+
 
 CONFIG.YML SETTINGS
 CHANGE_IN_PRICE: 100 REQUIRED
@@ -126,8 +129,11 @@ LIMIT = 4
 INTERVAL = '1d'
 profit_min = 15
 profit_max = 100  # only required if you want to limit max profit
-percent_below = 0.5  # change risk level:  0.7 = 70% below high_price, 0.5 = 50% below high_price
-MOVEMENT = True
+percent_below = 0.6  # change risk level:  0.7 = 70% below high_price, 0.5 = 50% below high_price
+# movement can be either:
+#  "MOVEMENT" for original movement calc
+#  "ATR_MOVEMENT" for Average True Range Percentage calc
+MOVEMENT = 'MOVEMENT'
 
 # Display Setttings
 all_info = True
@@ -228,6 +234,7 @@ def get_prices_high_low(list_coins, interval, limit):
 		coin_symbol = item['symbol']
 		h_p = []
 		l_p = []
+		atr = [] # average true range
 		try:
 			for i in item['data']:
 				close_time = i[0]
@@ -239,7 +246,9 @@ def get_prices_high_low(list_coins, interval, limit):
 				quote_volume = i[6]
 				h_p.append(high_price)
 				l_p.append(low_price)
-			prices_low_high[coin_symbol] = {'symbol': coin_symbol, 'high_price': h_p, 'low_price': l_p, 'current_potential': 0.0}
+				atr.append(high_price-low_price)
+			prices_low_high[coin_symbol] = {'symbol': coin_symbol, 'high_price': h_p, 'low_price': l_p, 'current_potential': 0.0, 
+											'atr_percentage': ((sum(atr)/len(atr)) / close_price) * 100}
 		except Exception as e:
 			print(f'Ignoring {coin_symbol} data issue')
 			continue
@@ -288,11 +297,14 @@ def do_work():
 					current_potential = ((high_price / last_price) * 100) - 100
 					coins[coin]['current_potential'] = current_potential
 					movement = (low_price / range)
-					print(f'{coin} {current_potential:.2f}% {movement:.2f}%')
+					print(f'{coin} {current_potential:.2f}% M:{movement:.2f}% ATRP:{coins[coin]["atr_percentage"]:.2f}%')
 
-					if MOVEMENT:
+					if MOVEMENT == "MOVEMENT":
 						if profit_min < current_potential < profit_max and last_price < buy_below and movement >= (TAKE_PROFIT + 0.2) and coin not in held_coins_list:
 							current_potential_list.append(coins[coin])
+					elif MOVEMENT ==  "ATR_MOVEMENT":
+						if profit_min < current_potential < profit_max and last_price < buy_below and coins[coin]["atr_percentage"] >= (TAKE_PROFIT) and coin not in held_coins_list:
+							current_potential_list.append(coins[coin])						
 					else:
 						if profit_min < current_potential < profit_max and last_price < buy_below and coin not in held_coins_list:
 							current_potential_list.append(coins[coin])
@@ -426,3 +438,7 @@ def do_work():
 			continue
 		except KeyboardInterrupt as ki:
 			continue
+
+if __name__ == '__main__':
+	# Testing 
+	do_work()
