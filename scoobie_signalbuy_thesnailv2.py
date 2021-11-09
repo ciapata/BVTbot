@@ -130,8 +130,10 @@ INTERVAL = '1d'
 profit_min = 15
 profit_max = 100  # only required if you want to limit max profit
 percent_below = 0.6  # change risk level:  0.7 = 70% below high_price, 0.5 = 50% below high_price
-MOVEMENT = False
-ATR_MOVEMENT = True
+# movement can be either:
+#  "MOVEMENT" for original movement calc
+#  "ATR_MOVEMENT" for Average True Range Percentage calc
+MOVEMENT = 'MOVEMENT'
 
 # Display Setttings
 all_info = True
@@ -297,10 +299,10 @@ def do_work():
 					movement = (low_price / range)
 					print(f'{coin} {current_potential:.2f}% M:{movement:.2f}% ATRP:{coins[coin]["atr_percentage"]:.2f}%')
 
-					if MOVEMENT:
+					if MOVEMENT == "MOVEMENT":
 						if profit_min < current_potential < profit_max and last_price < buy_below and movement >= (TAKE_PROFIT + 0.2) and coin not in held_coins_list:
 							current_potential_list.append(coins[coin])
-					elif ATR_MOVEMENT:
+					elif MOVEMENT ==  "ATR_MOVEMENT":
 						if profit_min < current_potential < profit_max and last_price < buy_below and coins[coin]["atr_percentage"] >= (TAKE_PROFIT) and coin not in held_coins_list:
 							current_potential_list.append(coins[coin])						
 					else:
