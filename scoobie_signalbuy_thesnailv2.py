@@ -1,5 +1,5 @@
 """
-The Snail v 2.1
+The Snail v 2.2
 "Buy the dips! ... then wait"
 
 STRATEGY
@@ -17,6 +17,9 @@ STRATEGY
 
 * ATR MOVEMENT
 calculates Average True Range Percent (ATRP) as an alternative to the default movement
+
+* DROP_CALCULATION
+Potential calculation as drop in % from high-price of X-day. Default 'False' to align with scoobie's version
 
 STRATEGY SETTINGS
 LIMIT = 4
@@ -134,6 +137,7 @@ percent_below = 0.6  # change risk level:  0.7 = 70% below high_price, 0.5 = 50%
 #  "MOVEMENT" for original movement calc
 #  "ATR_MOVEMENT" for Average True Range Percentage calc
 MOVEMENT = 'MOVEMENT'
+DROP_CALCULATION = False
 
 # Display Setttings
 all_info = True
@@ -296,18 +300,9 @@ def do_work():
 					current_range = high_price - last_price
 					current_potential = ((high_price / last_price) * 100) - 100
 					coins[coin]['current_potential'] = current_potential
+					current_drop = (100 * (high_price-last_price)) / high_price
 					movement = (low_price / range)
-					print(f'{coin} {current_potential:.2f}% M:{movement:.2f}% ATRP:{coins[coin]["atr_percentage"]:.2f}%')
-
-					if MOVEMENT == "MOVEMENT":
-						if profit_min < current_potential < profit_max and last_price < buy_below and movement >= (TAKE_PROFIT + 0.2) and coin not in held_coins_list:
-							current_potential_list.append(coins[coin])
-					elif MOVEMENT ==  "ATR_MOVEMENT":
-						if profit_min < current_potential < profit_max and last_price < buy_below and coins[coin]["atr_percentage"] >= (TAKE_PROFIT) and coin not in held_coins_list:
-							current_potential_list.append(coins[coin])						
-					else:
-						if profit_min < current_potential < profit_max and last_price < buy_below and coin not in held_coins_list:
-							current_potential_list.append(coins[coin])
+					print(f'{coin} CP:{current_potential:.2f}% CD:{current_drop:.2f}%  M:{movement:.2f}% ATRP:{coins[coin]["atr_percentage"]:.2f}%')
 
 					if block_info:
 						print(f'\nPrice:            ${last_price:.3f}\n'
@@ -321,10 +316,26 @@ def do_work():
 							# f'Potential profit before safety: {potential:.0f}%\n'
 							f'Buy above:        ${buy_above:.3f}\n'
 							f'Buy Below:        ${buy_below:.3f}\n'
-							f'Potential profit: {TextColors.TURQUOISE}{current_potential:.0f}%{TextColors.DEFAULT}'
+							f'Potential Profit: {TextColors.TURQUOISE}{current_potential:.0f}%{TextColors.DEFAULT}\n'
+							f'Current Drop: {TextColors.TURQUOISE}{current_drop:.0f}%{TextColors.DEFAULT}'
 							# f'Max Profit {max_potential:.2f}%\n'
 							# f'Min Profit {min_potential:.2f}%\n'
 						)
+
+					if DROP_CALCULATION:
+						current_potential = current_drop
+
+					if MOVEMENT == "MOVEMENT":
+						if profit_min < current_potential < profit_max and last_price < buy_below and movement >= (TAKE_PROFIT + 0.2) and coin not in held_coins_list:
+							current_potential_list.append(coins[coin])
+					elif MOVEMENT ==  "ATR_MOVEMENT":
+						if profit_min < current_potential < profit_max and last_price < buy_below and coins[coin]["atr_percentage"] >= (TAKE_PROFIT) and coin not in held_coins_list:
+							current_potential_list.append(coins[coin])						
+					else:
+						if profit_min < current_potential < profit_max and last_price < buy_below and coin not in held_coins_list:
+							current_potential_list.append(coins[coin])
+
+
 
 			if current_potential_list:
 				# print(current_potential_list)
