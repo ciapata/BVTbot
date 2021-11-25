@@ -707,6 +707,7 @@ def sell_coins(tpsl_override = False, specific_coin_to_sell = ""):
     '''sell coins that have reached the STOP LOSS or TAKE PROFIT threshold'''
     global hsp_head, session_profit_incfees_perc, session_profit_incfees_total, coin_order_id, trade_wins, trade_losses, historic_profit_incfees_perc, historic_profit_incfees_total, sell_all_coins, sell_specific_coin
     
+    global TRADE_TOTAL
     externals = sell_external_signals()
     
     last_price = get_price(False) # don't populate rolling window
@@ -884,6 +885,8 @@ def sell_coins(tpsl_override = False, specific_coin_to_sell = ""):
                 #write_log(f"\tSell\t{coin}\t{coins_sold[coin]['volume']}\t{BuyPrice}\t{PAIR_WITH}\t{LastPrice}\t{profit_incfees_total:.{decimals()}f}\t{PriceChange_Perc:.2f}\t{sell_reason}")
                 write_log(f"\tSell\t{coin}\t{coins_sold[coin]['volume']}\t{BuyPrice}\t{PAIR_WITH}\t{LastPrice}\t{profit_incfees_total:.{decimals()}f}\t{PriceChangeIncFees_Perc:.2f}\t{sell_reason}")
                 
+                # re-invest profit
+                TRADE_TOTAL += profit_incfees_total
                 #this is good
                 session_profit_incfees_total = session_profit_incfees_total + profit_incfees_total
                 session_profit_incfees_perc = session_profit_incfees_perc + ((profit_incfees_total/BUDGET) * 100)
