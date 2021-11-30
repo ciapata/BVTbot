@@ -89,7 +89,8 @@ trading_options:
   MSG_DISCORD: False
 
   # Whether the bot should reinvest your profits or not.
-  # If you set to True this will compound your profits (and losses)
+  # If you set to True the bot will dynamically adjust the TRADE_TOTAL (internally to the bot logic, not in this config file)
+  # so as to increase/decrease amount to invest per trade.
   REINVEST_PROFITS: False
 
   # This will tell the bot to restart signal modules every hour. This may be useful if for some reason you want to "reset"
